@@ -20,9 +20,10 @@ SKILLS/
 │           └── assets/                         # 可选：图片、字体等静态资源
 ├── templates/                                  # 新 skill 骨架，非 skill 区
 │   └── SKILL.template.md
-├── .claude/skills/<name> -> ../../skills/<domain>/<name>      # Claude Code 入口
-├── .agent/skills/<name>  -> ../../skills/<domain>/<name>      # Codex / OpenCode 等入口
-└── .cursor/skills/<name> -> ../../skills/<domain>/<name>      # Cursor 仓库级入口
+├── .claude/skills/<name>  -> ../../skills/<domain>/<name>     # Claude Code 入口
+├── .codex/skills/<name>   -> ../../skills/<domain>/<name>     # Codex CLI 入口
+├── .agents/skills/<name>  -> ../../skills/<domain>/<name>     # Vercel Labs skills-cli 通用池入口
+└── .cursor/skills/<name>  -> ../../skills/<domain>/<name>     # Cursor 仓库级入口
 ```
 
 > 注意：agent 目录下只能用**扁平 symlink**（一层 `<agent>/skills/<skill-name>` 直链到具体 skill），不要 symlink 整个 `skills/` 顶层——多数 agent 不会递归扫描 domain 子目录。
@@ -56,15 +57,18 @@ SKILLS/
 
 ## Agent Integration
 
-仓库已内置三套扁平 symlink，三种主流 agent 都能直接识别同一份 skill 源：
+仓库已内置四套扁平 symlink，主流 agent 都能直接识别同一份 skill 源：
 
-| Agent | 仓库内入口（已内置） | 用户级生效路径 |
-|-------|------------------|--------------|
-| Claude Code | `.claude/skills/<name>` | `~/.claude/skills/<name>` |
-| Codex / OpenCode 等读 `~/.agent` 的通用 agent | `.agent/skills/<name>` | `~/.agent/skills/<name>` |
-| Cursor | `.cursor/skills/<name>`（仓库级）| `~/.cursor/skills-cursor/<name>`（确定生效） |
+| Agent / 用法 | 仓库内入口（已内置） | 用户级生效路径 | 来源约定 |
+|---|---|---|---|
+| Claude Code | `.claude/skills/<name>` | `~/.claude/skills/<name>` | Claude Code 官方 |
+| Codex CLI | `.codex/skills/<name>` | `~/.codex/skills/<name>` | Codex CLI 官方 |
+| 通用池（跨 agent 共享）| `.agents/skills/<name>` | `~/.agents/skills/<name>` | Vercel Labs [`skills-cli`](https://github.com/jynba/skills-cli)（`npx skills`），自动适配 Cursor / Claude Code / Codex / OpenCode 等 41+ agent |
+| Cursor | `.cursor/skills/<name>`（仓库级）| `~/.cursor/skills-cursor/<name>`（确定生效）| Cursor 用户配置 |
 
-> 关于 Cursor：用户级路径 `~/.cursor/skills-cursor/<name>/SKILL.md` 是确定生效的；仓库级 `.cursor/skills/` 是否在所有 Cursor 版本中被自动加载，建议自己跑一次确认。如果 Cursor 没识别，用下方"批量装到用户级"脚本的 Cursor 段兜底。
+> **三层兜底**：每个 skill 至少能被三种方式发现——官方目录直读（`.claude` / `.codex` / `.cursor`）、Vercel Labs 通用池（`.agents`）、用户级软链。挑一种就够，不要重复装。
+
+> **关于 Cursor**：用户级路径 `~/.cursor/skills-cursor/<name>/SKILL.md` 是确定生效的；仓库级 `.cursor/skills/` 是否在所有 Cursor 版本中被自动加载，建议自己跑一次确认。如果 Cursor 没识别，用下方"批量装到用户级"脚本的 Cursor 段兜底。
 
 ### 批量装到用户级（可选，在仓库根目录执行）
 
@@ -77,10 +81,16 @@ for d in skills/*/*/; do
   ln -sfn "$(pwd)/$d" ~/.claude/skills/"$(basename "$d")"
 done
 
-# Codex / OpenCode 等读 ~/.agent/skills/ 的工具
-mkdir -p ~/.agent/skills
+# Codex CLI
+mkdir -p ~/.codex/skills
 for d in skills/*/*/; do
-  ln -sfn "$(pwd)/$d" ~/.agent/skills/"$(basename "$d")"
+  ln -sfn "$(pwd)/$d" ~/.codex/skills/"$(basename "$d")"
+done
+
+# 通用池（Vercel Labs skills-cli 体系，41+ agent 自动识别）
+mkdir -p ~/.agents/skills
+for d in skills/*/*/; do
+  ln -sfn "$(pwd)/$d" ~/.agents/skills/"$(basename "$d")"
 done
 
 # Cursor 用户级（确定生效）
@@ -96,18 +106,22 @@ done
 flowchart LR
     Source["skills/&lt;domain&gt;/&lt;name&gt;/SKILL.md"]
     Claude[".claude/skills/&lt;name&gt;"]
-    Agent[".agent/skills/&lt;name&gt;"]
+    Codex[".codex/skills/&lt;name&gt;"]
+    Agents[".agents/skills/&lt;name&gt;"]
     Cursor[".cursor/skills/&lt;name&gt;"]
     ClaudeCode["Claude Code"]
-    Codex["Codex / OpenCode"]
+    CodexCLI["Codex CLI"]
+    OpenCode["OpenCode / 41+ agents"]
     CursorIDE["Cursor IDE"]
 
     Claude -->|symlink| Source
-    Agent -->|symlink| Source
+    Codex -->|symlink| Source
+    Agents -->|symlink| Source
     Cursor -->|symlink| Source
 
     ClaudeCode --> Claude
-    Codex --> Agent
+    CodexCLI --> Codex
+    OpenCode --> Agents
     CursorIDE --> Cursor
 ```
 
@@ -126,8 +140,8 @@ cp templates/SKILL.template.md "skills/$DOMAIN/$NAME/SKILL.md"
 # 2. 编辑 frontmatter（name + description）和正文
 # 3. （可选）按需添加 references/ scripts/ assets/
 
-# 4. 在三个 agent 入口建扁平 symlink
-for AGENT in .claude .agent .cursor; do
+# 4. 在四个 agent 入口建扁平 symlink
+for AGENT in .claude .codex .agents .cursor; do
   ln -s "../../skills/$DOMAIN/$NAME" "$AGENT/skills/$NAME"
 done
 ```
@@ -138,7 +152,7 @@ done
 DOMAIN=content NAME=my-new-skill && \
   mkdir -p "skills/$DOMAIN/$NAME" && \
   cp templates/SKILL.template.md "skills/$DOMAIN/$NAME/SKILL.md" && \
-  for AGENT in .claude .agent .cursor; do \
+  for AGENT in .claude .codex .agents .cursor; do \
     ln -s "../../skills/$DOMAIN/$NAME" "$AGENT/skills/$NAME"; \
   done
 ```

@@ -27,6 +27,12 @@ tmp/
 *.log
 .cache/
 
-# 本仓库需要提交 .claude/skills 的 symlink，覆盖可能存在的全局忽略规则
+# 本仓库需要提交各 agent 入口目录里的 symlink，覆盖可能存在的全局忽略规则
 !.claude/
 !.claude/**
+!.codex/
+!.codex/**
+!.agents/
+!.agents/**
+!.cursor/
+!.cursor/**

@@ -8,11 +8,12 @@ Reusable skills are under `skills/<domain>/<skill-name>/SKILL.md`. Each `SKILL.m
 
 ## Agent-specific entry points
 
-The repo also maintains three flat symlink trees for direct agent discovery:
+The repo maintains four flat symlink trees for direct agent discovery:
 
-- `.claude/skills/<name>` — Claude Code
-- `.agent/skills/<name>`  — Codex, OpenCode, and other agents that read `~/.agent`
-- `.cursor/skills/<name>` — Cursor (repo-level)
+- `.claude/skills/<name>`  — Claude Code (official: `~/.claude/skills/`)
+- `.codex/skills/<name>`   — Codex CLI (official: `~/.codex/skills/`)
+- `.agents/skills/<name>`  — Vercel Labs `skills-cli` (`npx skills`) shared pool, auto-detected by Cursor / Claude Code / Codex / OpenCode and 41+ other agents (official: `~/.agents/skills/`)
+- `.cursor/skills/<name>`  — Cursor repo-level (user-level: `~/.cursor/skills-cursor/<name>`)
 
 Each symlink resolves to the same source under `skills/<domain>/<skill-name>/`. Edit the source, never the symlink.
 
