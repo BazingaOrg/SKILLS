@@ -31,7 +31,7 @@ SKILLS/
 
 | Domain  | Skill | When to use | What it does |
 |---------|-------|-------------|--------------|
-| content | [reverse-engineer-image-style](skills/content/reverse-engineer-image-style/SKILL.md) | 用户给参考图，想要**可复用的提示词**，并能在换主体后保留风格 | 用 L1-L4 解耦模型把"风格"和"主体"分离，4 步走完观察 → 指纹 → 适配 → 出 prompt，适配 Midjourney / Stable Diffusion / Flux |
+| content | [reverse-engineer-image-style](skills/content/reverse-engineer-image-style/SKILL.md) | 用户给参考图，想要**可复用的提示词**，并能在换主体后保留风格 | 用 L1-L4 解耦模型把"风格"和"主体"分离，4 步走完观察 → 指纹 → 适配 → 出 prompt，输出针对 ChatGPT / Claude / Gemini 等对话式 LLM 的自然语言提示词 |
 
 ## Conventions
 

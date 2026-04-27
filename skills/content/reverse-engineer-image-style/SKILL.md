@@ -1,7 +1,7 @@
 ---
 name: reverse-engineer-image-style
-description: Use when the user provides reference images and wants a reusable prompt that captures the visual style (not the subject) for Midjourney, Stable Diffusion, or Flux—including swapping in a new subject.
-version: 1.0.0
+description: Use when the user provides reference images and wants a reusable natural-language prompt that captures the visual style (not the subject) for conversational image-generation tools like ChatGPT/gpt-image, Claude, or Gemini—including swapping in a new subject.
+version: 1.1.0
 author: Bazinga
 ---
 
@@ -16,7 +16,7 @@ author: Bazinga
 | 1. 观察 | 把图拆成 L1 主体 / L2 表层 / L3 美学框架 / L4 元艺术哲学 | T1 |
 | 2. 指纹 | 输出结构化的美学指纹 JSON | T3 |
 | 3. 适配 | （仅跨主体时）标 universal/conditional/subject-bound，列风险与方案 | T4 |
-| 4. 出 prompt | 按目标工具（MJ / SD / Flux / 通用）生成提示词 | T5a-d |
+| 4. 出 prompt | 用自然语言长句生成给对话式 LLM（ChatGPT/Claude/Gemini）的提示词 | T5 |
 
 > 多图共性提炼、自检盲测、中文风格配方报告 —— 三项是**可选扩展**，默认不做，见 §6。
 
@@ -68,18 +68,23 @@ author: Bazinga
    - 此时建议用户：换参考图 / 接受气质转向 / 选择性放弃部分 L4 属性
 4. 输出最终可迁移视觉 DNA：8-15 个英文关键词，按权重顺序公式排列
 
-### Step 4 — 按工具出 prompt（→ T5a-d）
+### Step 4 — 出 prompt（→ T5）
 
-**工具差异速查表**（共性见 §3，差异在各自模板内）：
+**目标范式：对话式 LLM 生图**。用户直接把 prompt 贴进 ChatGPT、Claude、Gemini 等带视觉的对话式 LLM，让它们生图（或调用其内置/挂载的图像生成工具）。
 
-| 工具 | 提示词风格 | 关键参数/语法 | 模板 |
-|---|---|---|---|
-| **Midjourney** (v6+) | 标签 + CLI 参数 | `--ar` / `--sref` / `--sw` / `--stylize` / `--style raw` | T5a |
-| **Stable Diffusion** (含 SDXL/Pony 等) | 加权标签 + Negative | `(keyword:1.3)`，权重词 ≤ 8 | T5b |
-| **Flux** (dev/pro/schnell) | 自然语言长句（60-120 词）| `guidance_scale`，禁用括号堆 | T5c |
-| **通用 / 未指定** | 自然语言模板，跨工具兼容 | — | T5d |
+| 适用工具 | 输入方式 | 多模态特性 |
+|---|---|---|
+| **ChatGPT**（含 gpt-image-1 / gpt-image-2 / DALL·E 3）| 自然语言长句，可贴参考图 | 支持参考图、连续生图、风格延续 |
+| **Claude**（通过 MCP / Computer Use 接生图工具）| 自然语言，参考图通过对话上下文传递 | 适合多轮迭代、prompt 微调 |
+| **Gemini / 其他对话式 LLM** | 同上 | 同上 |
 
-**默认行为**：用户没指定工具时，先走 T5d 给通用版，再询问是否需要工具特化。
+**统一原则**（与上一代专业工具链 MJ/SD/Flux 不同）：
+
+- 不使用 `--ar` / `--sref` / `--stylize` 等 CLI 参数
+- 不使用 `(keyword:1.3)` 加权语法
+- 不依赖 negative prompt 字段，**通过正向描述显式排除**（"avoid HDR, avoid digital sharpness"）
+- **画幅、构图、镜头**通过自然语言描述（"a 16:9 cinematic wide shot, layered foreground/midground/background"）
+- 多轮迭代是优势——首轮给 prompt，后续用对话调整（"再压一些饱和度，去掉 grain"）
 
 ---
 
@@ -90,17 +95,16 @@ author: Bazinga
 ```
 [主体] → [艺术流派/时代锚定] → [构图] → [光照] → [镜头] →
 [色彩/调色] → [材质/技法] → [氛围/情绪] → [后期/胶片特征] →
-[排除项 negative] → [工具参数 --ar / --sref 等]
+[排除项 negative] → [画幅 aspect ratio]
 ```
 
 > 经验法则：生成模型对前 30% 的 token 最敏感。**流派锚定放在主体之后**能最大化"神韵"保真度。
 
-### 3.2 四项基本原则
+### 3.2 三项基本原则
 
 - **深度抽象**：提 L3/L4，避 L1/L2。例：不写 `golden hour`（L2 时辰），写 `natural rim light with warm temperature bias`（L3 光影逻辑）。
 - **禁用空词**：不用 `beautiful` / `amazing` / `masterpiece` / `best quality`。用 `2.39:1 anamorphic, natural rim light, split-toning` 这种**可验证**描述。
-- **排除法**：显式列 negative cues，例如 `no HDR, no digital sharpness, no oversaturation`。
-- **工具对齐**：见 §2 Step 4 速查表。
+- **正向排除**：对话式 LLM 不吃 negative prompt 字段，要把"不要什么"写成正向句子。例如 `avoid HDR, avoid digital sharpness, avoid oversaturation`。
 
 ---
 
@@ -139,7 +143,7 @@ author: Bazinga
 
 **L4 兼容性体检**：田园挽歌 ↔ 赛博朋克 → 都属"静谧 + 人文"基调，**兼容**。
 
-**Step 4 输出（T5d 通用模板）**
+**Step 4 输出（T5 自然语言模板）**
 
 > A cyberpunk city street at dusk, **in the style of Studio Ghibli hand-drawn animation meets 1980s Kodachrome**, gentle wide composition with layered foreground/midground/background, soft diffused rim lighting with warm accent glow from neon signs, 35mm wide shot with mild atmospheric haze, palette dominated by muted teal and amber with dusty pink highlights, painterly cel-shaded textures with subtle grain, wistful and quietly optimistic mood, mild halation and lifted blacks. Avoid HDR, avoid digital sharpness, avoid neon oversaturation. Aspect ratio 16:9.
 
@@ -164,6 +168,6 @@ author: Bazinga
 
 ## 7. 参考资源
 
-- [`references/prompts.md`](references/prompts.md)：T1-T7 全套模板（T6/T7 标记为可选扩展）
+- [`references/prompts.md`](references/prompts.md)：T1-T7 全套模板（T6/T7 标记为可选扩展，T5 是自然语言模板）
 - [`references/checklists.md`](references/checklists.md)：提取前 / 迁移前 / 输出前三张硬性检查清单
 - [`references/multi-image.md`](references/multi-image.md)：多图共性提炼专题

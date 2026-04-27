@@ -9,7 +9,7 @@
 | Step 1 观察 | T1 | 必跑 |
 | Step 2 指纹 | T3 | 必跑 |
 | Step 3 适配 | T4 | 仅跨主体场景 |
-| Step 4 出 prompt | T5a / T5b / T5c / T5d | 按目标工具二选一 |
+| Step 4 出 prompt | T5 | 自然语言模板，适用于 ChatGPT/Claude/Gemini 等对话式 LLM |
 | 可选 · 多图共性 | T2 | 见 [`multi-image.md`](multi-image.md) |
 | 可选 · 自检盲测 | T6 | 用户明确要求时启用 |
 | 可选 · 中文配方报告 | T7 | 用户明确要求时启用 |
@@ -209,151 +209,13 @@
 
 ---
 
-## T5a — Midjourney 提示词生成（Step 4 · MJ 分支）
+## T5 — 对话式 LLM 自然语言提示词（Step 4）
 
-> 工具差异速查见 `SKILL.md` §2 Step 4。本节只列 MJ 特定细节。
-
-
-**何时调用**：用户目标工具是 Midjourney（v6+）。
+**用途**：把美学指纹（+ T4 适配结果）转写成可直接喂给 ChatGPT、Claude、Gemini 等对话式 LLM 的自然语言 prompt。**这是默认的、唯一的出 prompt 路径**。
 
 **调用指令**：
 
-> 基于前面的美学指纹和（如有的话）T4 适配结果，为 Midjourney 生成提示词。严格遵循下方规范。
-
-### 参数速查
-
-| 参数 | 作用 | 建议值 |
-|---|---|---|
-| `--ar` | 画幅比例 | 映射 `aspect_ratio`：2.39:1 → `21:9` 或 `7:3`；16:9 → `16:9` |
-| `--sref <url>` | 风格参考图（强力，推荐） | 如用户提供原图 URL 必用 |
-| `--sw` | 风格参考权重 | 默认 100；严格还原 400-700；弱引用 20-50 |
-| `--stylize` (`--s`) | MJ 自身艺术化程度 | 写实类 50-150；艺术化 500-1000 |
-| `--style raw` | 减少 MJ 美化偏好 | 需要真实感、电影感时 |
-| `--chaos` (`--c`) | 结果多样性 | 0-30；需要构图多样用 20-40 |
-| `--v` | 模型版本 | 6.1（当前稳定） |
-
-### 权重顺序（严格遵守）
-
-```
-[主体] → [艺术流派/时代锚定] → [构图] → [光照] → [镜头] →
-[色彩/调色] → [材质/技法] → [氛围/情绪] → [后期/胶片特征] → [工具参数]
-```
-
-### 输出三个变体
-
-1. **忠实复刻版**：严格还原原图气质，`--sw` 偏高（300-500），`--stylize` 保守（100-200）
-2. **主体适配版**：按 T4 调整 conditional 属性，`--sw` 中等（100-200），允许 MJ 对新主体发挥
-3. **SREF 极简版**：假设已用 `--sref`，prompt 只保留新主体 + 流派锚定 + 必要构图，其他交给 sref
-
-每个变体给出：
-- 完整 prompt 字符串（含所有参数）
-- 一行设计取舍说明
-
----
-
-## T5b — Stable Diffusion 提示词生成（Step 4 · SD 分支）
-
-> 工具差异速查见 `SKILL.md` §2 Step 4。本节只列 SD 特定细节。
-
-
-**何时调用**：用户目标工具是 SD 1.5 / SDXL / Pony / Illustrious / 其他 SD 衍生模型。
-
-**调用指令**：
-
-> 为 Stable Diffusion 生成提示词。输出 **Positive + Negative + 采样建议** 三部分。
-
-### 权重语法规则
-
-| 写法 | 效果 |
-|---|---|
-| `(keyword:1.2)` | 加强 1.2 倍 |
-| `(keyword:1.3)` ~ `(keyword:1.5)` | 强化核心特征 |
-| `(keyword:0.8)` | 弱化 |
-| `[keyword]` | 小幅弱化（约 0.9） |
-
-**铁律**：总权重词（> 1.0 的）控制在 ≤ 8 个，否则画面扭曲。核心特征才加权，装饰性词汇不加。
-
-### Positive Prompt 结构
-
-严格按权重顺序公式排列。核心特征用 `(:1.2)` - `(:1.3)` 加权：
-
-```
-[主体描述], [流派锚定], (构图关键词:1.2), (光照关键词:1.3), [镜头], 
-[色彩/调色词], [材质/技法], [氛围], [后期特征]
-```
-
-### Negative Prompt
-
-必包含：
-- `negative_cues` JSON 字段中的每一项（翻译为英文）
-- 通用 neg（按题材取舍）：`lowres, blurry, bad anatomy, extra fingers, watermark, signature, jpeg artifacts, oversaturated, plastic skin, deformed`
-
-### 采样建议
-
-| 参数 | 建议值 |
-|---|---|
-| Steps | 25-35 |
-| CFG Scale | 写实 5-6.5；艺术化 7-9 |
-| Sampler | DPM++ 2M Karras（通用）/ Euler a（艺术向） |
-| Size | 按 `aspect_ratio` 映射：2.39:1 → 1536×640；16:9 → 1344×768；1:1 → 1024×1024（SDXL） |
-| Hires.fix | 推荐开启，denoise 0.3-0.45 |
-
-### 输出两个变体
-
-1. **写实向**：适配 Realistic Vision / Juggernaut / RealVisXL 等，权重保守
-2. **艺术向**：适配 DreamShaper / AnythingXL / PonyDiffusion 等，权重可激进
-
----
-
-## T5c — Flux 提示词生成（Step 4 · Flux 分支）
-
-> 工具差异速查见 `SKILL.md` §2 Step 4。本节只列 Flux 特定细节。
-
-
-**何时调用**：用户目标工具是 Flux.1（dev / pro / schnell）或基于 Flux 的衍生服务。
-
-**调用指令**：
-
-> 为 Flux 生成提示词。Flux 与 SD 的提示词范式**不同**，需用自然语言长句而非标签堆。
-
-### Flux 特性
-
-- **偏好自然语言长句**，不喜欢逗号分隔的短词堆（与 SD 相反）
-- 对**摄影 / 电影术语**理解力很强（"shot on 35mm film"、"anamorphic lens"、"golden hour bokeh"）
-- 对**艺术史术语**也理解好（"impressionist brushwork"、"ukiyo-e linework"）
-- 权重语法支持有限，不要堆括号
-- Negative prompt 支持弱，靠**正向描述**控制画面
-
-### 输出格式
-
-一段 60-120 词的自然语言描述，按权重顺序公式的**信息密度**分布：
-- **前半段**（高权重区）：主体 + 流派锚定 + 构图 + 光照
-- **后半段**（中低权重区）：镜头 + 材质 + 氛围 + 后期
-
-参数层（Flux API 常用）：
-- `guidance_scale`：写实 2.5-3.5；艺术化 4-6
-- `num_inference_steps`：dev 版 28-40；schnell 4-8
-- 尺寸按 `aspect_ratio` 映射
-
-### 输出两个变体
-
-1. **摄影写实向**：用电影摄影术语（"shot on Cinestill 800T, anamorphic lens flare, 35mm wide shot, natural halation"）
-2. **艺术绘画向**：用艺术史术语（"painted in the style of late impressionism, visible brushstrokes, muted palette reminiscent of early Monet"）
-
----
-
-## T5d — 通用自然语言版 / 跨主题迁移模板（Step 4 · 默认分支）
-
-> 用户没指定目标工具时**默认走这里**；之后再问是否需要工具特化。
-
-
-**何时调用**：
-- 用户没有指定目标工具
-- 或在 ChatGPT / Claude 等对话式环境中让模型辅助生图 / 迭代
-
-**调用指令**：
-
-> 按通用自然语言模板生成提示词。该模板跨工具兼容（MJ / SD / Flux 都能吃），但不含工具特定参数。
+> 把美学指纹和（如有的话）T4 适配结果转写成自然语言 prompt，直接可贴进 ChatGPT/Claude/Gemini 的对话框。**不要使用 MJ/SD 风格的 CLI 参数或加权语法**。
 
 ### 模板结构
 
@@ -366,13 +228,32 @@ Avoid [NEGATIVE_CUES].
 Aspect ratio [AR].
 ```
 
+### 写作规则（对话式 LLM 通用）
+
+- **自然语言长句**，不是逗号分隔的标签堆。允许必要时用逗号分隔修饰短语，但每个核心维度（构图 / 光照 / 镜头 / 调色 / 材质 / 氛围 / 后期）至少一个完整子句。
+- **正向排除**：`avoid HDR, avoid digital sharpness, avoid neon oversaturation`。不写 `negative: ...` 字段。
+- **画幅写在末尾**：`Aspect ratio 16:9` 或 `widescreen 2.39:1` 这种自然语言形式，不要用 `--ar 16:9`。
+- **流派锚定靠前**：`in the style of [流派]` 这种短语放在主体之后、构图之前，是神韵保真度的关键。
+- **不堆叠修饰副词**：`very`、`extremely`、`super` 这类词对画面影响极小，删掉换成可验证特征。
+- **长度控制**：60-120 词为佳。低于 60 信息量不足，高于 120 关键 token 被稀释。
+
 ### 示例（原图：宫崎骏式山村 → 新主体：赛博朋克城市）
 
 > A cyberpunk city street at dusk, in the style of Studio Ghibli hand-drawn animation meets 1980s Kodachrome, gentle wide composition with layered foreground/midground/background, soft diffused rim lighting with warm accent glow from neon signs, 35mm wide shot with mild atmospheric haze, palette dominated by muted teal and amber with dusty pink highlights, painterly cel-shaded textures with subtle grain, wistful and quietly optimistic mood, mild halation and lifted blacks. Avoid HDR, avoid digital sharpness, avoid neon oversaturation. Aspect ratio 16:9.
 
+### 工具特定建议（按需采纳）
+
+| LLM | 输入提示 | 多模态用法 |
+|---|---|---|
+| **ChatGPT**（gpt-image-1 / DALL·E 3）| 直接发 prompt + 让 ChatGPT 调用 image tool | 可上传参考图作为视觉锚点 |
+| **Claude** | 在 Claude.ai 或 API 里，结合 MCP 调用 Replicate/Imagen/etc | 把参考图作为 attachment 一起发 |
+| **Gemini** | 直接 prompt，Gemini 内置生图 | 可上传参考图 + 自然语言迭代 |
+
 ### 输出要求
 
-一次给出 **3 个不同主体**的样例 prompt，覆盖不同类型（人物 / 风景 / 物件 / 抽象场景），用以验证风格的跨主题稳定性。三个样例必须共享**同一套 L3/L4 描述**，只替换 L1 主体和适配后的 L2 属性。
+输出 **3 个不同主体** 的样例 prompt，覆盖不同类型（人物 / 风景 / 物件 / 抽象场景），用以验证风格的跨主题稳定性。**三个样例必须共享同一套 L3/L4 描述**，只替换 L1 主体和适配后的 L2 属性。
+
+每个样例之后，附一行"风格保真度自检"：列出该 prompt 中体现"神韵"的 3-5 个关键词。
 
 ---
 
@@ -398,12 +279,12 @@ Aspect ratio [AR].
 
 ### 3. Prompt 修订建议
 如果存在 ⚠️ 或 ❌，给出具体修订动作：
-- 加哪个词 / 删哪个词
-- 调整哪个位置（权重顺序）
-- SD 场景：调整哪个权重数值
-- MJ 场景：调整 `--sw` / `--stylize` 数值
+- 加哪个关键词 / 删哪个关键词
+- 调整描述的位置（权重顺序公式）
+- 把过弱的描述改写得更具体（例：`soft lighting` → `soft diffused rim lighting from a low key light`）
+- 把过强的描述降级（例：直接删除某个修饰短语，而不是堆更多反向词）
 
-**迭代规则**：若发现 ≥ 2 条偏差，修订后再跑一次 T6，直到最多 2 轮。超过 2 轮仍有明显偏差，回到 T3 检查美学指纹是否在源头就漏掉了关键维度。
+**迭代规则**：若发现 ≥ 2 条偏差，修订后再跑一次 T6，最多 2 轮。超过 2 轮仍有明显偏差，回到 T3 检查美学指纹是否在源头就漏掉了关键维度。
 
 ---
 
@@ -444,16 +325,16 @@ Aspect ratio [AR].
 ### 5. 风格配方：跨主题应用指南
 - **主料（Subject）**：新主体如何描述
 - **调料（Visual DNA）**：英文关键词集合
-- **火候（Parameters）**：目标工具的参数建议
-  - MJ：`--ar`、`--sref`、`--sw`、`--stylize` 建议值
-  - SD：权重分配、采样器、CFG、分辨率
-  - Flux：guidance_scale、steps
+- **使用建议**：
+  - 在 ChatGPT / Claude / Gemini 等对话式 LLM 里，直接贴 T5 自然语言 prompt
+  - 多轮对话迭代时，按 §3 风险速查表的 conditional 项做局部调整（例：再压一些饱和度、去掉 grain）
+  - 如有参考图，把它作为 attachment 一起发，能显著提升风格保真度
 
 ### 6. 英文提示词示例
-给一个假想新主体的完整 prompt 示例（使用 T5d 通用模板），体现"风格不变，主体可变"。
+给一个假想新主体的完整 prompt 示例（使用 T5 自然语言模板），体现"风格不变，主体可变"。
 
 ### 7. 沉淀建议（可选）
 如果这个风格值得长期复用，建议用户：
-- 保存此 JSON 指纹
-- 如用 MJ，保存 `--sref` 图片 URL
-- 如用 SD，考虑训练 LoRA 或保存关键词模板
+- **保存 JSON 指纹**：作为风格库的可机读条目
+- **保存参考图**：作为视觉锚点，配合多模态 LLM 使用时直接附上
+- **保存 3-5 个样例 prompt**：覆盖不同主体（人/物/景），形成自己的"风格触发器"
