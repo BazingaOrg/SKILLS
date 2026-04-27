@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors
+*.swp
+*.swo
+.idea/
+.vscode/
+*.sublime-*
+
+# Node / 工具产物
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 临时
+tmp/
+*.log
+.cache/
+
+# 本仓库需要提交 .claude/skills 的 symlink，覆盖可能存在的全局忽略规则
+!.claude/
+!.claude/**
