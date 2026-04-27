@@ -1,8 +1,37 @@
 # SKILLS
 
-> Bazinga 的个人 AI Agent 技能仓库。一份源、按 domain 分层、Claude Code / Codex / Cursor 都能直接用。
+> Bazinga 的个人 AI Agent 技能仓库。一份源、按 domain 分层、Claude Code / Codex / Cursor / OpenCode 等 41+ agent 都能直接用。
 
-把日常用得顺手的工作流沉淀成可复用的 [Anthropic Skill](https://docs.claude.com/en/docs/claude-code/skills)。每个 skill 是一个独立目录，含一份 `SKILL.md` 和可选的 `references/` `scripts/` `assets/`。仓库内部维护好三套扁平 symlink，clone 下来即可被三种主流 agent 自动发现，不依赖任何额外 CLI。
+把日常用得顺手的工作流沉淀成可复用的 [Anthropic Skill](https://docs.claude.com/en/docs/claude-code/skills)。每个 skill 是一个独立目录，含一份 `SKILL.md` 和可选的 `references/` `scripts/` `assets/`。仓库内部维护好四套扁平 symlink，配合 [Vercel Labs `skills-cli`](https://github.com/jynba/skills-cli) 一行安装，无需 clone。
+
+## Quick Install
+
+通过 `npx skills`（[Vercel Labs `skills-cli`](https://github.com/jynba/skills-cli)）一行装到任意 agent，**不需要 clone 仓库**：
+
+```bash
+# 装到 Claude Code（用户级）
+npx skills add BazingaOrg/SKILLS -a claude-code -g -y
+
+# 一次装到所有已检测到的 agent（Cursor / Codex / Claude Code / OpenCode 等 41+ 个）
+npx skills add BazingaOrg/SKILLS -a '*' -g -y
+
+# 只装某一个 skill
+npx skills add BazingaOrg/SKILLS --skill reverse-engineer-image-style -g -y
+
+# 仅列出仓库里所有 skill（不安装）
+npx skills add BazingaOrg/SKILLS --list
+```
+
+后续运维：
+
+```bash
+npx skills list                          # 列出已装 skill
+npx skills check                         # 检查可升级版本
+npx skills update                        # 升级到最新
+npx skills remove BazingaOrg/SKILLS      # 卸载
+```
+
+> 如果你想本地改代码、贡献 skill，或者要用 symlink 自己接管，看下面的 [Layout](#layout) 和 [Agent Integration](#agent-integration) 章节。
 
 ## Layout
 
@@ -70,9 +99,11 @@ SKILLS/
 
 > **关于 Cursor**：用户级路径 `~/.cursor/skills-cursor/<name>/SKILL.md` 是确定生效的；仓库级 `.cursor/skills/` 是否在所有 Cursor 版本中被自动加载，建议自己跑一次确认。如果 Cursor 没识别，用下方"批量装到用户级"脚本的 Cursor 段兜底。
 
-### 批量装到用户级（可选，在仓库根目录执行）
+### 批量装到用户级（仅在你 clone 了本仓库时使用）
 
-下面的脚本会把仓库内**所有** skill 一次性 symlink 到对应 agent 的用户级目录。按需复制对应几段：
+> 大多数人用顶部的 [Quick Install](#quick-install) 即可。下面的脚本是给"已经 clone 仓库、想用 symlink 接管、或者要本地改代码"的场景用的。
+
+在仓库根目录执行——下面的脚本会把仓库内**所有** skill 一次性 symlink 到对应 agent 的用户级目录。按需复制对应几段：
 
 ```bash
 # Claude Code
