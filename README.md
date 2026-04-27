@@ -58,13 +58,39 @@ SKILLS/
 
 仓库已内置三套扁平 symlink，三种主流 agent 都能直接识别同一份 skill 源：
 
-| Agent | 仓库内入口 | 用户级安装方式（可选） |
-|-------|-----------|---------------------|
-| Claude Code | `.claude/skills/<name>` | `ln -s "$(pwd)/skills/<domain>/<name>" ~/.claude/skills/<name>` |
-| Codex / OpenCode 等读 `~/.agent` 的通用 agent | `.agent/skills/<name>` | `ln -s "$(pwd)/skills/<domain>/<name>" ~/.agent/skills/<name>` |
-| Cursor | `.cursor/skills/<name>`（仓库级）| `ln -s "$(pwd)/skills/<domain>/<name>" ~/.cursor/skills-cursor/<name>`（用户级，确定生效）|
+| Agent | 仓库内入口（已内置） | 用户级生效路径 |
+|-------|------------------|--------------|
+| Claude Code | `.claude/skills/<name>` | `~/.claude/skills/<name>` |
+| Codex / OpenCode 等读 `~/.agent` 的通用 agent | `.agent/skills/<name>` | `~/.agent/skills/<name>` |
+| Cursor | `.cursor/skills/<name>`（仓库级）| `~/.cursor/skills-cursor/<name>`（确定生效） |
 
-> 关于 Cursor：用户级路径 `~/.cursor/skills-cursor/<name>/SKILL.md` 是确定生效的；仓库级 `.cursor/skills/` 是否在所有 Cursor 版本中被自动加载，建议自己跑一次确认。如果 Cursor 没识别，用上表第三列的用户级软链兜底。
+> 关于 Cursor：用户级路径 `~/.cursor/skills-cursor/<name>/SKILL.md` 是确定生效的；仓库级 `.cursor/skills/` 是否在所有 Cursor 版本中被自动加载，建议自己跑一次确认。如果 Cursor 没识别，用下方"批量装到用户级"脚本的 Cursor 段兜底。
+
+### 批量装到用户级（可选，在仓库根目录执行）
+
+下面的脚本会把仓库内**所有** skill 一次性 symlink 到对应 agent 的用户级目录。按需复制对应几段：
+
+```bash
+# Claude Code
+mkdir -p ~/.claude/skills
+for d in skills/*/*/; do
+  ln -sfn "$(pwd)/$d" ~/.claude/skills/"$(basename "$d")"
+done
+
+# Codex / OpenCode 等读 ~/.agent/skills/ 的工具
+mkdir -p ~/.agent/skills
+for d in skills/*/*/; do
+  ln -sfn "$(pwd)/$d" ~/.agent/skills/"$(basename "$d")"
+done
+
+# Cursor 用户级（确定生效）
+mkdir -p ~/.cursor/skills-cursor
+for d in skills/*/*/; do
+  ln -sfn "$(pwd)/$d" ~/.cursor/skills-cursor/"$(basename "$d")"
+done
+```
+
+> `ln -sfn` 是幂等的：已存在的同名 symlink 会被刷新而不是报错，所以这段脚本可以反复跑。
 
 ```mermaid
 flowchart LR
@@ -87,24 +113,26 @@ flowchart LR
 
 ## Adding a New Skill
 
+在仓库根目录执行（**先把开头两行的 `DOMAIN` 和 `NAME` 改成你自己的**）：
+
 ```bash
-# 1. 选好 domain，创建 skill 目录
-mkdir -p skills/<domain>/<skill-name>
+DOMAIN=content              # 选一个 domain：infrastructure / automation / writing / research / content
+NAME=my-new-skill           # skill 名（小写 kebab-case）
 
-# 2. 从模板拷一份 SKILL.md
-cp templates/SKILL.template.md skills/<domain>/<skill-name>/SKILL.md
+# 1. 创建 skill 目录并从模板拷一份 SKILL.md
+mkdir -p "skills/$DOMAIN/$NAME"
+cp templates/SKILL.template.md "skills/$DOMAIN/$NAME/SKILL.md"
 
-# 3. 编辑 frontmatter（name + description）和正文
+# 2. 编辑 frontmatter（name + description）和正文
+# 3. （可选）按需添加 references/ scripts/ assets/
 
-# 4. （可选）按需添加 references/ scripts/ assets/
-
-# 5. 在三个 agent 入口建扁平 symlink
-ln -s ../../skills/<domain>/<skill-name> .claude/skills/<skill-name>
-ln -s ../../skills/<domain>/<skill-name> .agent/skills/<skill-name>
-ln -s ../../skills/<domain>/<skill-name> .cursor/skills/<skill-name>
+# 4. 在三个 agent 入口建扁平 symlink
+for AGENT in .claude .agent .cursor; do
+  ln -s "../../skills/$DOMAIN/$NAME" "$AGENT/skills/$NAME"
+done
 ```
 
-或者直接复制下面这一行替换好 `<domain>` 和 `<skill-name>` 一次跑完：
+或者一条命令跑完目录与 symlink（前两行改完，整段拷贝执行）：
 
 ```bash
 DOMAIN=content NAME=my-new-skill && \
