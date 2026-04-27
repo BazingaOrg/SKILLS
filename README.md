@@ -31,7 +31,7 @@ SKILLS/
 
 | Domain  | Skill | When to use | What it does |
 |---------|-------|-------------|--------------|
-| content | [reverse-engineer-image-style](skills/content/reverse-engineer-image-style/SKILL.md) | 用户给参考图，想抽取风格/复用提示词/做跨主体迁移 | 用 L1-L4 四层解耦模型反向解构图像，输出美学指纹 JSON、视觉 DNA 关键词、中文风格配方报告，适配 Midjourney / SD / Flux |
+| content | [reverse-engineer-image-style](skills/content/reverse-engineer-image-style/SKILL.md) | 用户给参考图，想要**可复用的提示词**，并能在换主体后保留风格 | 用 L1-L4 解耦模型把"风格"和"主体"分离，4 步走完观察 → 指纹 → 适配 → 出 prompt，适配 Midjourney / Stable Diffusion / Flux |
 
 ## Conventions
 
