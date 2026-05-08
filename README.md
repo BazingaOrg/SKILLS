@@ -62,6 +62,7 @@ SKILLS/
 | Domain  | Skill | When to use | What it does |
 |---------|-------|-------------|--------------|
 | content | [reverse-engineer-image-style](skills/content/reverse-engineer-image-style/SKILL.md) | 用户给参考图，想要**可复用的提示词**，并能在换主体后保留风格 | 用 L1-L4 解耦模型把"风格"和"主体"分离，4 步走完观察 → 指纹 → 适配 → 出 prompt，输出针对 ChatGPT / Claude / Gemini 等对话式 LLM 的自然语言提示词 |
+| content | [craft-github-readme](skills/content/craft-github-readme/SKILL.md) | 给 GitHub 项目写或重写**根目录** README.md，需要清晰可扫描的结构 | 先识别项目类型（CLI / 库 / 应用 / 设计系统 / Skill 集合等），从段落工具箱挑必备 5 段 + 可选段；强制量化代替修辞，按 3 秒 / 30 秒 / 5 分钟三个梯度组织信息；tw93 等优秀 README 作为案例参考而非硬性模板 |
 
 ## Conventions
 
